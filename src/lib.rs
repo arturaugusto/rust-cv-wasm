@@ -2,15 +2,10 @@ mod utils;
 
 use wasm_bindgen::prelude::*;
 
-use cv::{
-    feature::akaze::{Akaze, KeyPoint},
-    image::{
-        image::{DynamicImage, Rgba, ImageBuffer},
-        imageproc::drawing,
-    },
-    //vis::show_image::{self, event},
-};
+use cv::{feature::akaze::{Akaze, KeyPoint}};
 use ::image::RgbaImage;
+use image::{DynamicImage, Rgba, ImageBuffer};
+//use imageproc::drawing;
 
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -25,17 +20,14 @@ extern {
 }
 
 #[wasm_bindgen]
-pub fn greet() -> Vec<u8>{
-    // Load the image.
-    // let src_image = image::open("teste2.jpg").expect("failed to open image file");
+pub fn greet(data: Vec<u8>, width: u32, height: u32) -> Vec<u8>{
     
-    // let mut src_image_buf = RgbaImage::new(32, 32);
-    let mut src_image_buf: RgbaImage = ImageBuffer::new(512, 512);
-
-    for x in 15..=300 {
-        for y in 8..300 {
-            src_image_buf.put_pixel(x, y, Rgba([255, 0, 0, 255]));
-            src_image_buf.put_pixel(y, x, Rgba([255, 0, 0, 255]));
+    let mut src_image_buf: RgbaImage = ImageBuffer::new(width, height);
+    
+    for y in 0..height as usize {
+        for x in 0..width as usize {
+            let start = x + y * height as usize;
+            src_image_buf.put_pixel(x as u32, y as u32, Rgba([data[start], data[start+1], data[start+2], data[start+3]]));
         }
     }
 
@@ -46,26 +38,35 @@ pub fn greet() -> Vec<u8>{
     let akaze = Akaze::default();
 
     // Extract the features from the image using akaze.
-    let (key_points, _descriptors) = akaze.extract(&src_image);
+    match akaze.extract(&src_image) {
+        (key_points, _descriptors) => {
+            let res_bytes = src_image.into_bytes();
+            for key_point in key_points {
+                println!("{}", key_point.point.1);
+            }
+            return res_bytes
+        },
+        _ => {
+            unimplemented!();
+        }
+    } 
+    // return src_image.into_bytes();
+}
 
-    // Make a canvas with the `imageproc::drawing` module.
-    // We use the blend mode so that we can draw with translucency on the image.
-    // We convert the image to rgba8 during this process.
-    let mut image_canvas = drawing::Blend(src_image.to_rgba8());
 
-    // Draw a cross on the image at every keypoint detected.
-    for KeyPoint { point: (x, y), .. } in key_points {
-        drawing::draw_cross_mut(
-            &mut image_canvas,
-            Rgba([0, 255, 255, 128]),
-            x as i32,
-            y as i32,
-        );
+#[test]
+fn testit_test() {
+    let width = 40;
+    let height = 40;
+    let mut src_image_buf: RgbaImage = ImageBuffer::new(width, height);
+
+    for y in 10..(height-4) as usize {
+        for x in 10..(width-4) as usize {
+            src_image_buf.put_pixel(x as u32, y as u32, Rgba([100,230,1,255]));
+        }
     }
 
-    // Get the resulting image.
-    let out_image = DynamicImage::ImageRgba8(image_canvas.0);
-    let res_bytes = out_image.into_bytes();
-    alert(&(res_bytes[2].to_string()));
-    return res_bytes
+    let _res = greet(src_image_buf.to_vec(), width, height);
+    // println!("{}", res[0]);
+    
 }

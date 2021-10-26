@@ -13,7 +13,7 @@ default = ["console_error_panic_hook"]
 [dependencies.cv]
 git = "https://github.com/rust-cv/cv.git"
 default-features = false
-features = ["akaze", "image", "imageproc"]
+features = ["akaze"]
 
 
 [dependencies]
